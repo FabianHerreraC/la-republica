@@ -508,9 +508,12 @@
     card.querySelector('p').textContent = book.text;
     // Tarjeta anclada al punto: 12x6 celdas si es horizontal,
     // 7x11 si es vertical, orientada hacia donde haya espacio.
-    const wCells = p.horizontal ? 12 : 7;
-    const hCells = p.horizontal ? 6 : 11;
-    card.classList.toggle('vertical', !p.horizontal);
+    // En pantallas angostas (móvil) todas son verticales para no
+    // salirse de la cuadrícula.
+    const horizontal = p.horizontal && window.innerWidth >= 768;
+    const wCells = horizontal ? 12 : 7;
+    const hCells = horizontal ? 6 : 11;
+    card.classList.toggle('vertical', !horizontal);
     let col = (p.col + wCells <= cols) ? p.col : p.col - wCells;
     let row = (p.row + hCells <= rows) ? p.row : p.row - hCells;
     col = Math.max(0, Math.min(col, cols - wCells));
