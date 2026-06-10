@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuadrícula Interactiva</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #ffffff;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  #grid-canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    cursor: crosshair;
+  }
+
+  /* Nav bar minimalista */
+  #topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 24px;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  #topbar span {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #000;
+    background: #fff;
+    padding: 4px 8px;
+  }
+
+  /* Tarjeta expandible alineada a la cuadrícula */
+  #card {
+    position: absolute;
+    background: #000;
+    border: 1px solid #000;
+    color: #fff;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.1);
+    transition: top 0.45s cubic-bezier(.65,0,.35,1),
+                left 0.45s cubic-bezier(.65,0,.35,1),
+                width 0.45s cubic-bezier(.65,0,.35,1),
+                height 0.45s cubic-bezier(.65,0,.35,1),
+                transform 0.45s cubic-bezier(.65,0,.35,1),
+                opacity 0.3s ease;
+  }
+
+  #card.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+    /* Micro movimiento de flotación; arranca al terminar el crecimiento */
+    animation: floating 7s ease-in-out 0.55s infinite;
+  }
+
+  @keyframes floating {
+    0%   { transform: scale(1) translate(0, 0); }
+    25%  { transform: scale(1) translate(4px, -10px); }
+    50%  { transform: scale(1) translate(-6px, 6px); }
+    75%  { transform: scale(1) translate(5px, 8px); }
+    100% { transform: scale(1) translate(0, 0); }
+  }
+
+  #card .card-inner {
+    width: 100%;
+    height: 100%;
+    padding: 28px 36px;
+    display: flex;
+    gap: 36px;
+    opacity: 0;
+    transition: opacity 0.3s ease 0.35s;
+  }
+
+  #card.open .card-inner { opacity: 1; }
+
+  #card .card-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  #card .card-index {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: #777;
+  }
+
+  #card h2 {
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+
+  #card p {
+    font-size: 11px;
+    font-weight: 300;
+    line-height: 1.7;
+    color: #bbb;
+    max-width: 32em;
+    margin-top: auto;
+    padding-top: 12px;
+  }
+
+  #card .img-placeholder {
+    flex: 1;
+    max-width: 40%;
+    background: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  /* Variante vertical: texto arriba, imagen abajo */
+  #card.vertical .card-inner {
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  #card.vertical .img-placeholder {
+    max-width: none;
+    width: 100%;
+    flex: 1;
+  }
+
+  #card.vertical .card-text {
+    flex: 0 0 auto;
+  }
+
+  #card.vertical p {
+    margin-top: 20px;
+    padding-top: 0;
+  }
+
+  #card .close-btn {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+    color: #999;
+  }
+</style>
+</head>
+<body>
+<nav id="topbar">
+  <span>La República de Platón</span>
+  <span>FH 2026</span>
+</nav>
+
+<canvas id="grid-canvas"></canvas>
+
+<div id="card">
+  <button class="close-btn" aria-label="Cerrar">×</button>
+  <div class="card-inner">
+    <div class="card-text">
+      <div>
+        <div class="card-index">01 — 06</div>
+        <h2>Título de la tarjeta</h2>
+      </div>
+      <p>Aquí irá el texto descriptivo de esta sección. Menos, pero mejor.</p>
+    </div>
+    <div class="img-placeholder">Imagen</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const BOOKS = [
+    {
+      title: 'Libro I: El umbral de la fuerza',
+      text: 'En el descenso al Pireo, bajo la sombra de deudas mortales y sacrificios inminentes, Sócrates desgarra la ilusión de que la justicia es mero botín del más fuerte, dejando una herida abierta en el tejido del lenguaje donde la verdad aún se oculta.',
+      keywords: ['Ancianidad','Deseo','Deuda','Sacrificio','Provecho','Fuerza','Sofística','Tensión','Refutación','Aporía','Virtud','Función','Céfalo','Polemarco','Trasímaco','Ignorancia','Ironía','Límite','Apariencia','Agonía']
+    },
+    {
+      title: 'Libro II: El anillo y la génesis',
+      text: 'Provocado por el espectro de un anillo que confiere la impunidad de los dioses, el diálogo abandona la escala humana para invocar una ciudad de palabras, un teatro invisible donde la esquiva bestia de la justicia pueda finalmente ser cazada.',
+      keywords: ['Invisibilidad','Giges','Impunidad','Reputación','Génesis','Necesidad','Lujo','Fiebre','Purificación','Guardianes','Perros','Educación','Censura','Dioses','Mentira','Homero','Ficción','Apariencia','Contrato','Desnudez']
+    },
+    {
+      title: 'Libro III: La fragua de los guardianes',
+      text: 'Para moldear el alma de quienes custodiarán la ciudad, es preciso purgar la poesía de sus terrores telúricos y sellar el pacto social con una noble mentira, un mito fundacional de metales y sangre nacida de las entrañas mismas del mundo.',
+      keywords: ['Imitación','Mímesis','Melodía','Ritmo','Austeridad','Gimnasia','Medicina','Jueces','Nobleza','Ficción','Oro','Plata','Bronce','Hermandad','Tierra','Campamento','Propiedad','Canto','Sombra','Hades']
+    },
+    {
+      title: 'Libro IV: La anatomía de la armonía',
+      text: 'Al diseccionar la polis recién nacida, se revela que la justicia no es un acto visible, sino una arquitectura secreta: el orden silencioso y sagrado donde cada parte del alma humana acepta su propio límite ante la tiranía del caos.',
+      keywords: ['Riqueza','Pobreza','Unidad','Legislación','Sabiduría','Valentía','Templanza','Justicia','Intrínseco','Tripartición','Razón','Irascibilidad','Apetito','Armonía','Salud','Enfermedad','Facción','Naturaleza','Equilibrio','Totalidad']
+    },
+    {
+      title: 'Libro V: Las tres olas de la paradoja',
+      text: 'Desafiando el pudor humano y las costumbres mortales, Sócrates convoca tres olas de escándalo —la desnudez femenina, la abolición del linaje y la coronación del filósofo— para demostrar que lo divino solo irrumpe cuando se aniquila por completo lo privado.',
+      keywords: ['Olas','Igualdad','Desnudez','Comunidad','Eros','Matrimonio','Crianza','Sagrado','Guerra','Griegos','Bárbaros','Filósofo','Espectáculo','Verdad','Opinión','Ignorancia','Ser','No-ser','Belleza','Absoluto']
+    },
+    {
+      title: 'Libro VI: El sol y la ceguera',
+      text: 'Aislado en una nave de necios y asediado por la sofística de la multitud, el verdadero amante de la sabiduría alza la mirada hacia el Bien, un sol invisible cuya luz inefable engendra a la vez el conocimiento en el alma y el ser en el mundo.',
+      keywords: ['Nave','Corrupción','Multitud','Sofista','Bestia','Naturaleza','Sol','Luz','Ceguera','Visión','Idea','Bien','Origen','Línea','Imágenes','Creencias','Matemáticas','Inteligencia','Ascenso','Dialéctica']
+    },
+    {
+      title: 'Libro VII: El descenso a las sombras',
+      text: 'Desde las profundidades de una caverna subterránea donde los hombres adoran fantasmas de piedra, el iniciado es arrastrado con dolor hacia la luz del origen, solo para ser obligado a retornar, como un dios exiliado, a gobernar entre las tinieblas.',
+      keywords: ['Caverna','Cadenas','Fuego','Sombras','Títeres','Ascenso','Deslumbramiento','Retorno','Compulsión','Aritmética','Geometría','Astronomía','Armonía','Dialéctica','Preludio','Sinopsis','Ley','Liberación','Tragedia','Destino']
+    },
+    {
+      title: 'Libro VIII: La caída del orden',
+      text: 'Como todo lo que nace bajo la luna está condenado a corromperse, la ciudad perfecta y su alma gemela se desmoronan en una trágica cascada de mutaciones, descendiendo desde el rigor marcial hasta el vertiginoso y fatal carnaval de la libertad democrática.',
+      keywords: ['Decadencia','Número','Mutación','Timocracia','Honor','Victoria','Oligarquía','Riqueza','Avaricia','Zánganos','Mendigos','Democracia','Libertad','Diversidad','Desorden','Insolencia','Anarquía','Igualitarismo','Conflicto','Ruina']
+    },
+    {
+      title: 'Libro IX: El abismo del tirano',
+      text: 'En el fondo del pozo psíquico habita el tirano, un monstruo devorado por sus propias quimeras inconfesables, cuya miseria absoluta demuestra, mediante un cálculo oscuro e irrevocable, que huir de la justicia es condenarse al peor de los infiernos en vida.',
+      keywords: ['Tiranía','Deseos','Ilegítimos','Sueños','Locura','Eros','Paranoia','Esclavitud','Pánico','Infelicidad','Placer','Dolor','Ilusión','Cobre','Quimera','León','Monstruo','Cálculo','Condena','Vacío']
+    },
+    {
+      title: 'Libro X: El destino de las almas',
+      text: 'Tras desterrar la magia engañosa de los poetas, el velo del cosmos se rasga a través del relato de Er, revelando el Eje del Mundo donde las almas, bajo la mirada impasible de la Necesidad, asumen la terrible carga de elegir su propio destino invisible.',
+      keywords: ['Mímesis','Espejo','Cama','Forma','Pintor','Poeta','Tragedia','Luto','Inmortalidad','Recompensa','Mito','Er','Peregrinaje','Jueces','Cielo','Tierra','Huso','Necesidad','Lotería','Olvido']
+    }
+  ];
+
+  const canvas = document.getElementById('grid-canvas');
+  const ctx = canvas.getContext('2d');
+  const card = document.getElementById('card');
+  const closeBtn = card.querySelector('.close-btn');
+
+  const TARGET_CELL = 45;     // tamaño deseado del cuadrado en px
+  const NUM_POINTS = BOOKS.length;
+  const ROMANS = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
+  const DOT_RADIUS = 10;
+  const HIT_RADIUS = 18;      // radio de click sobre un punto
+
+  let cols, rows, cellW, cellH;
+  let points = [];            // {col, row} índices de intersección
+  let mouse = { x: -9999, y: -9999, inside: false };
+  let activePoint = null;     // punto cuya tarjeta está abierta
+  let numbersStart = 0;       // inicio de la animación de palabras
+  let pulseStart = -10000;    // inicio del pulso de los demás puntos al click
+  const wordSizes = new Map(); // tamaño de fuente por palabra (cache)
+  let cardRect = null;        // {col,row,wCells,hCells} de la tarjeta abierta
+  let dpr = 1;
+
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Número de columnas/filas para mantener cuadrados ~proporcionales
+    cols = Math.max(4, Math.round(w / TARGET_CELL));
+    rows = Math.max(4, Math.round(h / TARGET_CELL));
+    cellW = w / cols;
+    cellH = h / rows;
+    wordSizes.clear();
+
+    generatePoints();
+    closeCard();
+  }
+
+  function generatePoints() {
+    points = [];
+    const used = new Set();
+    // Evita los bordes para que siempre haya celdas adyacentes
+    let guard = 0;
+    while (points.length < NUM_POINTS && guard < 1000) {
+      guard++;
+      const col = 2 + Math.floor(Math.random() * (cols - 4));
+      const row = 2 + Math.floor(Math.random() * (rows - 4));
+      const key = col + ',' + row;
+      if (used.has(key)) continue;
+      // Separación mínima entre puntos
+      const tooClose = points.some(p =>
+        Math.abs(p.col - col) < 2 && Math.abs(p.row - row) < 2
+      );
+      if (tooClose) continue;
+      used.add(key);
+      // Alterna orientación: mitad horizontales, mitad verticales
+      points.push({ col, row, horizontal: points.length % 2 === 0 });
+    }
+  }
+
+  function pointXY(p) {
+    return { x: p.col * cellW, y: p.row * cellH };
+  }
+
+  function draw() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    ctx.clearRect(0, 0, w, h);
+
+    // Resalta el cuadro bajo el cursor
+    if (mouse.inside) {
+      const c = Math.floor(mouse.x / cellW);
+      const r = Math.floor(mouse.y / cellH);
+      if (c >= 0 && c < cols && r >= 0 && r < rows) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(c * cellW, r * cellH, cellW, cellH);
+      }
+    }
+
+    // Cuadrícula
+    ctx.strokeStyle = '#d0d0d0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let c = 0; c <= cols; c++) {
+      const x = Math.round(c * cellW) + 0.5;
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+    }
+    for (let r = 0; r <= rows; r++) {
+      const y = Math.round(r * cellH) + 0.5;
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+    }
+    ctx.stroke();
+
+    // La línea (vertical u horizontal) bajo el cursor pasa de gris a negro
+    if (mouse.inside) {
+      const LINE_HOVER = 4; // distancia en px para considerar hover
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      const nearC = Math.round(mouse.x / cellW);
+      if (Math.abs(mouse.x - nearC * cellW) <= LINE_HOVER && nearC >= 0 && nearC <= cols) {
+        const x = Math.round(nearC * cellW) + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      const nearR = Math.round(mouse.y / cellH);
+      if (Math.abs(mouse.y - nearR * cellH) <= LINE_HOVER && nearR >= 0 && nearR <= rows) {
+        const y = Math.round(nearR * cellH) + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+    }
+
+    // Con una tarjeta abierta, cada cuadro muestra centrada una palabra
+    // clave del libro, repitiéndolas hasta llenar la cuadrícula.
+    // Aparecen progresivamente de izquierda a derecha, de arriba abajo,
+    // completando la animación en 2 segundos.
+    if (activePoint) {
+      const words = BOOKS[points.indexOf(activePoint)].keywords;
+      const totalCells = cols * rows;
+      const elapsed = performance.now() - numbersStart;
+      // Curva ease-in: inicia lenta y acelera hacia el final (2s en total)
+      const t = Math.min(1, elapsed / 2000);
+      const progress = t * t * t * totalCells;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const maxW = cellW - 8;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const k = r * cols + c;
+          const alpha = Math.max(0, Math.min(1, progress - k));
+          if (alpha <= 0) continue;
+          const word = words[k % words.length];
+          // Reduce la tipografía si la palabra no cabe en el cuadro
+          let size = wordSizes.get(word);
+          if (size === undefined) {
+            size = 10;
+            ctx.font = '300 10px "Helvetica Neue", Helvetica, Arial, sans-serif';
+            const tw = ctx.measureText(word).width;
+            if (tw > maxW) size = Math.max(6, Math.floor(10 * maxW / tw));
+            wordSizes.set(word, size);
+          }
+          ctx.font = '300 ' + size + 'px "Helvetica Neue", Helvetica, Arial, sans-serif';
+          ctx.fillStyle = 'rgba(150,150,150,' + alpha + ')';
+          ctx.fillText(word, (c + 0.5) * cellW, (r + 0.5) * cellH);
+        }
+      }
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    // Punto bajo el cursor (si lo hay): crece él, encogen los demás
+    const hoveredPoint = mouse.inside ? points.find(pt => {
+      const xy = pointXY(pt);
+      return Math.hypot(mouse.x - xy.x, mouse.y - xy.y) <= HIT_RADIUS;
+    }) : null;
+
+    // Líneas al cursor + puntos + distancias
+    for (const p of points) {
+      const { x, y } = pointXY(p);
+
+      if (mouse.inside) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(mouse.x, mouse.y);
+        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Punto negro: crece al pasar el cursor; si el hover está en otro
+      // punto, los demás se reducen a la mitad (transición suave)
+      p.radius = p.radius === undefined ? DOT_RADIUS : p.radius;
+      const pulseT = (performance.now() - pulseStart - (p.pulseDelay || 0)) / 500;
+      if (activePoint && p !== activePoint && pulseT >= 0 && pulseT < 1) {
+        // Pulso al hacer click: los demás puntos crecen hasta el radio
+        // de hover y decrecen al mínimo en medio segundo, en orden de
+        // cercanía al punto clickeado
+        p.radius = pulseT < 0.5
+          ? DOT_RADIUS + (DOT_RADIUS * 4 - DOT_RADIUS) * (pulseT / 0.5)
+          : DOT_RADIUS * 4 - (DOT_RADIUS * 4 - DOT_RADIUS / 2) * ((pulseT - 0.5) / 0.5);
+      } else if (activePoint && p !== activePoint && pulseT < 0) {
+        // Aún no le llega el pulso: mantiene su tamaño normal
+        p.radius += (DOT_RADIUS - p.radius) * 0.25;
+      } else {
+        const target = hoveredPoint === p ? DOT_RADIUS * 4
+          : (activePoint && p !== activePoint) ? DOT_RADIUS / 2
+          : hoveredPoint ? DOT_RADIUS / 2
+          : DOT_RADIUS;
+        p.radius += (target - p.radius) * 0.25;
+      }
+      ctx.beginPath();
+      ctx.arc(x, y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#000';
+      ctx.fill();
+
+      // Numeral romano del libro + distancia en px
+      if (mouse.inside) {
+        const roman = ROMANS[points.indexOf(p)];
+        const d = Math.round(Math.hypot(mouse.x - x, mouse.y - y));
+        const label = d + ' px';
+        ctx.font = '12px "Helvetica Neue", Helvetica, Arial, sans-serif';
+        const tw = ctx.measureText(label).width;
+        // Coloca la etiqueta del lado donde haya espacio
+        let tx = x + 10;
+        if (tx + tw > w - 4) tx = x - 10 - tw;
+        let ty = y - 10;
+        if (ty < 30) ty = y + 36;
+        // Fondo blanco para legibilidad sobre la cuadrícula
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(tx - 3, ty - 27, tw + 6, 31);
+        ctx.fillStyle = '#000';
+        ctx.font = '600 11px "Helvetica Neue", Helvetica, Arial, sans-serif';
+        ctx.fillText(roman, tx, ty - 16);
+        ctx.font = '12px "Helvetica Neue", Helvetica, Arial, sans-serif';
+        ctx.fillText(label, tx, ty);
+      }
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  // --- Tarjeta expandible ---
+
+  function openCard(p) {
+    activePoint = p;
+    numbersStart = performance.now();
+    pulseStart = performance.now();
+    // Escalona el pulso: los puntos más cercanos al click pulsan primero
+    const origin = pointXY(p);
+    let maxDist = 0;
+    for (const q of points) {
+      if (q === p) continue;
+      const qxy = pointXY(q);
+      q.pulseDist = Math.hypot(qxy.x - origin.x, qxy.y - origin.y);
+      maxDist = Math.max(maxDist, q.pulseDist);
+    }
+    for (const q of points) {
+      if (q === p) continue;
+      q.pulseDelay = maxDist ? (q.pulseDist / maxDist) * 600 : 0;
+    }
+    const idx = points.indexOf(p);
+    const book = BOOKS[idx];
+    const num = String(idx + 1).padStart(2, '0');
+    card.querySelector('.card-index').textContent = num + ' — ' + String(NUM_POINTS).padStart(2, '0');
+    card.querySelector('h2').textContent = book.title;
+    card.querySelector('p').textContent = book.text;
+    // Tarjeta anclada al punto: 12x6 celdas si es horizontal,
+    // 7x11 si es vertical, orientada hacia donde haya espacio.
+    const wCells = p.horizontal ? 12 : 7;
+    const hCells = p.horizontal ? 6 : 11;
+    card.classList.toggle('vertical', !p.horizontal);
+    let col = (p.col + wCells <= cols) ? p.col : p.col - wCells;
+    let row = (p.row + hCells <= rows) ? p.row : p.row - hCells;
+    col = Math.max(0, Math.min(col, cols - wCells));
+    row = Math.max(0, Math.min(row, rows - hCells));
+    cardRect = { col, row, wCells, hCells };
+
+    const { x, y } = pointXY(p);
+    // Parte desde el punto clickeado para el efecto de crecimiento
+    card.style.transition = 'none';
+    card.style.left = x + 'px';
+    card.style.top = y + 'px';
+    card.style.width = '0px';
+    card.style.height = '0px';
+    void card.offsetWidth; // fuerza reflow
+    card.style.transition = '';
+
+    card.style.left = (col * cellW) + 'px';
+    card.style.top = (row * cellH) + 'px';
+    card.style.width = (wCells * cellW) + 'px';
+    card.style.height = (hCells * cellH) + 'px';
+    card.classList.add('open');
+  }
+
+  function closeCard() {
+    activePoint = null;
+    cardRect = null;
+    card.classList.remove('open');
+  }
+
+  // --- Eventos ---
+
+  window.addEventListener('mousemove', e => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    mouse.inside = true;
+  });
+
+  window.addEventListener('mouseout', e => {
+    if (!e.relatedTarget) mouse.inside = false;
+  });
+
+  canvas.addEventListener('click', e => {
+    const hit = points.find(p => {
+      const { x, y } = pointXY(p);
+      return Math.hypot(e.clientX - x, e.clientY - y) <= HIT_RADIUS;
+    });
+    if (hit) {
+      if (activePoint === hit) closeCard();
+      else openCard(hit);
+    } else if (activePoint) {
+      closeCard();
+    }
+  });
+
+  closeBtn.addEventListener('click', closeCard);
+  window.addEventListener('resize', resize);
+
+  resize();
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
