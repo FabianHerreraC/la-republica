@@ -20,6 +20,7 @@
     width: 100vw;
     height: 100vh;
     cursor: crosshair;
+    touch-action: none; /* el deslizar del dedo mueve el "cursor", no hace scroll */
   }
 
   /* Nav bar minimalista */
@@ -550,6 +551,21 @@
   window.addEventListener('mouseout', e => {
     if (!e.relatedTarget) mouse.inside = false;
   });
+
+  // Soporte táctil: deslizar el dedo mueve el cursor virtual sin click
+  function trackTouch(e) {
+    const t = e.touches[0];
+    if (!t) return;
+    mouse.x = t.clientX;
+    mouse.y = t.clientY;
+    mouse.inside = true;
+  }
+
+  canvas.addEventListener('touchstart', trackTouch, { passive: true });
+  canvas.addEventListener('touchmove', e => {
+    trackTouch(e);
+    e.preventDefault(); // evita el scroll mientras se desliza sobre la cuadrícula
+  }, { passive: false });
 
   canvas.addEventListener('click', e => {
     const hit = points.find(p => {
