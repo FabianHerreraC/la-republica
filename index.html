@@ -209,18 +209,20 @@
     padding-top: 12px;
   }
 
-  #card .img-placeholder {
+  #card .card-img {
     flex: 1;
     max-width: 40%;
+    min-width: 0;
     background: #1a1a1a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #666;
-    font-size: 9px;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
+    object-fit: cover;
+    object-position: center 30%; /* privilegia el rostro del retrato */
+    height: 100%;
+    filter: grayscale(1) contrast(1.05);
+    opacity: 0;
+    transition: opacity 0.5s ease 0.4s;
   }
+
+  #card.open .card-img { opacity: 1; }
 
   /* Variante vertical: texto arriba, imagen abajo */
   #card.vertical .card-inner {
@@ -228,10 +230,12 @@
     gap: 28px;
   }
 
-  #card.vertical .img-placeholder {
+  #card.vertical .card-img {
     max-width: none;
     width: 100%;
-    flex: 1;
+    height: auto;
+    flex: 1 1 0;
+    min-height: 0; /* sin esto la altura intrínseca desborda la tarjeta */
   }
 
   #card.vertical .card-text {
@@ -288,7 +292,7 @@
       </div>
       <p>Aquí irá el texto descriptivo de esta sección. Menos, pero mejor.</p>
     </div>
-    <div class="img-placeholder">Imagen</div>
+    <img class="card-img" src="" alt="">
   </div>
 </div>
 
@@ -365,6 +369,13 @@
   const TARGET_CELL = 45;     // tamaño deseado del cuadrado en px
   const NUM_POINTS = BOOKS.length;
   const ROMANS = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
+  // Un retrato por libro (hay nueve; el Libro X retoma el del anciano)
+  const IMAGES = [
+    'assets/retrato-01.jpg', 'assets/retrato-02.jpg', 'assets/retrato-03.jpg',
+    'assets/retrato-04.jpg', 'assets/retrato-06.jpg', 'assets/retrato-07.jpg',
+    'assets/retrato-08.jpg', 'assets/retrato-09.jpg', 'assets/retrato-03.jpg',
+    'assets/retrato-05.jpg'
+  ];
   const DOT_RADIUS = 10;
   const HIT_RADIUS = 18;      // radio de click sobre un punto
 
@@ -734,6 +745,9 @@
     card.querySelector('.card-index').textContent = num + ' — ' + String(NUM_POINTS).padStart(2, '0');
     card.querySelector('h2').textContent = book.title;
     card.querySelector('p').textContent = book.text;
+    const img = card.querySelector('.card-img');
+    img.src = IMAGES[idx];
+    img.alt = 'Retrato — ' + book.title;
     // Tarjeta anclada al punto: 12x6 celdas si es horizontal,
     // 7x11 si es vertical, orientada hacia donde haya espacio.
     // En pantallas angostas (móvil) todas son verticales para no
@@ -842,6 +856,9 @@
       btn.dataset.role = at === 0 ? 'X' : at === 1 ? 'Y' : '';
     });
   }
+
+  // Precarga los retratos para que aparezcan sin demora al abrir la tarjeta
+  [...new Set(IMAGES)].forEach(src => { new Image().src = src; });
 
   syncMenu();
   resize();
