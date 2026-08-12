@@ -199,6 +199,15 @@
     margin-top: 12px;
   }
 
+  #card .card-role {
+    font-size: 9px;
+    font-weight: 300;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #777;
+    margin-top: 7px;
+  }
+
   #card p {
     font-size: 11px;
     font-weight: 300;
@@ -289,6 +298,7 @@
       <div>
         <div class="card-index">01 — 06</div>
         <h2>Título de la tarjeta</h2>
+        <div class="card-role"></div>
       </div>
       <p>Aquí irá el texto descriptivo de esta sección. Menos, pero mejor.</p>
     </div>
@@ -369,12 +379,19 @@
   const TARGET_CELL = 45;     // tamaño deseado del cuadrado en px
   const NUM_POINTS = BOOKS.length;
   const ROMANS = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
-  // Un retrato por libro (hay nueve; el Libro X retoma el del anciano)
-  const IMAGES = [
-    'assets/retrato-01.jpg', 'assets/retrato-02.jpg', 'assets/retrato-03.jpg',
-    'assets/retrato-04.jpg', 'assets/retrato-06.jpg', 'assets/retrato-07.jpg',
-    'assets/retrato-08.jpg', 'assets/retrato-09.jpg', 'assets/retrato-03.jpg',
-    'assets/retrato-05.jpg'
+  // Una persona por libro. Hay nueve retratos para diez libros:
+  // el Libro X vuelve sobre don Gustavo, el mayor de todos.
+  const PEOPLE = [
+    { name: 'Amparo Restrepo Gil',    role: 'Secretaria del distrito',   img: 'assets/retrato-01.jpg' },
+    { name: 'Yeison Cardona Mejía',   role: 'Recolector de café',        img: 'assets/retrato-02.jpg' },
+    { name: 'Hernando Ospina Trujillo', role: 'Capataz de finca',        img: 'assets/retrato-03.jpg' },
+    { name: 'Álvaro Peláez Nieto',    role: 'Operario de maquinaria',    img: 'assets/retrato-04.jpg' },
+    { name: 'Gustavo Arenas Villamil', role: 'Sacristán del pueblo',     img: 'assets/retrato-05.jpg' },
+    { name: 'Nubia Estela Camargo',   role: 'Enfermera rural',           img: 'assets/retrato-06.jpg' },
+    { name: 'Rosalba Quintero Páez',  role: 'Docente de primaria',       img: 'assets/retrato-07.jpg' },
+    { name: 'Elkin Mosquera Rentería', role: 'Motorista de chalupa',     img: 'assets/retrato-08.jpg' },
+    { name: 'Duván Alexis Torres',    role: 'Aprendiz de taller',        img: 'assets/retrato-09.jpg' },
+    { name: 'Gustavo Arenas Villamil', role: 'Sacristán del pueblo',     img: 'assets/retrato-05.jpg' }
   ];
   const DOT_RADIUS = 10;
   const HIT_RADIUS = 18;      // radio de click sobre un punto
@@ -743,11 +760,13 @@
     const book = BOOKS[idx];
     const num = String(idx + 1).padStart(2, '0');
     card.querySelector('.card-index').textContent = num + ' — ' + String(NUM_POINTS).padStart(2, '0');
-    card.querySelector('h2').textContent = book.title;
+    const person = PEOPLE[idx];
+    card.querySelector('h2').textContent = person.name;
+    card.querySelector('.card-role').textContent = person.role;
     card.querySelector('p').textContent = book.text;
     const img = card.querySelector('.card-img');
-    img.src = IMAGES[idx];
-    img.alt = 'Retrato — ' + book.title;
+    img.src = person.img;
+    img.alt = 'Retrato de ' + person.name;
     // Tarjeta anclada al punto: 12x6 celdas si es horizontal,
     // 7x11 si es vertical, orientada hacia donde haya espacio.
     // En pantallas angostas (móvil) todas son verticales para no
@@ -858,7 +877,7 @@
   }
 
   // Precarga los retratos para que aparezcan sin demora al abrir la tarjeta
-  [...new Set(IMAGES)].forEach(src => { new Image().src = src; });
+  [...new Set(PEOPLE.map(p => p.img))].forEach(src => { new Image().src = src; });
 
   syncMenu();
   resize();
