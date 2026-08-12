@@ -47,6 +47,90 @@
     padding: 4px 8px;
   }
 
+  /* Menú lateral de ejes */
+  #menu {
+    position: fixed;
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    z-index: 20;
+  }
+
+  #menu .menu-label {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #999;
+    background: #fff;
+    padding: 2px 6px;
+    margin-bottom: 4px;
+  }
+
+  #menu .menu-item {
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #000;
+    background: #fff;
+    border: 1px solid #d0d0d0;
+    padding: 8px 10px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.25s ease, color 0.25s ease,
+                border-color 0.25s ease;
+  }
+
+  #menu .menu-item i {
+    font-style: normal;
+    font-size: 8px;
+    color: #aaa;
+    transition: color 0.25s ease;
+  }
+
+  #menu .menu-item:hover { border-color: #000; }
+
+  #menu .menu-item.active {
+    background: #000;
+    color: #fff;
+    border-color: #000;
+  }
+
+  #menu .menu-item.active i { color: #777; }
+
+  /* El eje activo se marca con su rol cartesiano */
+  #menu .menu-item::after {
+    content: attr(data-role);
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    color: #fff;
+    margin-left: 2px;
+  }
+
+  @media (max-width: 767px) {
+    #menu {
+      left: 12px;
+      right: 12px;
+      top: auto;
+      bottom: 14px;
+      transform: none;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    #menu .menu-label { display: none; }
+    #menu .menu-item { font-size: 9px; padding: 6px 8px; gap: 4px; }
+  }
+
   /* Tarjeta expandible alineada a la cuadrícula */
   #card {
     position: absolute;
@@ -179,6 +263,19 @@
   <span>FH 2026</span>
 </nav>
 
+<aside id="menu">
+  <div class="menu-label">Ejes</div>
+  <button class="menu-item" data-axis="0">
+    <span>Apropiación</span><i>vs</i><span>Apertura</span>
+  </button>
+  <button class="menu-item" data-axis="1">
+    <span>Teórica</span><i>vs</i><span>Práctica</span>
+  </button>
+  <button class="menu-item" data-axis="2">
+    <span>Cambio</span><i>vs</i><span>Permanencia</span>
+  </button>
+</aside>
+
 <canvas id="grid-canvas"></canvas>
 
 <div id="card">
@@ -200,51 +297,61 @@
   const BOOKS = [
     {
       title: 'Libro I: El umbral de la fuerza',
+      axes: [-0.8, 0.4, -0.5],
       text: 'En el descenso al Pireo, bajo la sombra de deudas mortales y sacrificios inminentes, Sócrates desgarra la ilusión de que la justicia es mero botín del más fuerte, dejando una herida abierta en el tejido del lenguaje donde la verdad aún se oculta.',
       keywords: ['Ancianidad','Deseo','Deuda','Sacrificio','Provecho','Fuerza','Sofística','Tensión','Refutación','Aporía','Virtud','Función','Céfalo','Polemarco','Trasímaco','Ignorancia','Ironía','Límite','Apariencia','Agonía']
     },
     {
       title: 'Libro II: El anillo y la génesis',
+      axes: [-0.5, -0.2, -0.3],
       text: 'Provocado por el espectro de un anillo que confiere la impunidad de los dioses, el diálogo abandona la escala humana para invocar una ciudad de palabras, un teatro invisible donde la esquiva bestia de la justicia pueda finalmente ser cazada.',
       keywords: ['Invisibilidad','Giges','Impunidad','Reputación','Génesis','Necesidad','Lujo','Fiebre','Purificación','Guardianes','Perros','Educación','Censura','Dioses','Mentira','Homero','Ficción','Apariencia','Contrato','Desnudez']
     },
     {
       title: 'Libro III: La fragua de los guardianes',
+      axes: [-0.3, 0.7, 0.5],
       text: 'Para moldear el alma de quienes custodiarán la ciudad, es preciso purgar la poesía de sus terrores telúricos y sellar el pacto social con una noble mentira, un mito fundacional de metales y sangre nacida de las entrañas mismas del mundo.',
       keywords: ['Imitación','Mímesis','Melodía','Ritmo','Austeridad','Gimnasia','Medicina','Jueces','Nobleza','Ficción','Oro','Plata','Bronce','Hermandad','Tierra','Campamento','Propiedad','Canto','Sombra','Hades']
     },
     {
       title: 'Libro IV: La anatomía de la armonía',
+      axes: [0.1, 0.3, 0.8],
       text: 'Al diseccionar la polis recién nacida, se revela que la justicia no es un acto visible, sino una arquitectura secreta: el orden silencioso y sagrado donde cada parte del alma humana acepta su propio límite ante la tiranía del caos.',
       keywords: ['Riqueza','Pobreza','Unidad','Legislación','Sabiduría','Valentía','Templanza','Justicia','Intrínseco','Tripartición','Razón','Irascibilidad','Apetito','Armonía','Salud','Enfermedad','Facción','Naturaleza','Equilibrio','Totalidad']
     },
     {
       title: 'Libro V: Las tres olas de la paradoja',
+      axes: [0.9, -0.1, -0.4],
       text: 'Desafiando el pudor humano y las costumbres mortales, Sócrates convoca tres olas de escándalo —la desnudez femenina, la abolición del linaje y la coronación del filósofo— para demostrar que lo divino solo irrumpe cuando se aniquila por completo lo privado.',
       keywords: ['Olas','Igualdad','Desnudez','Comunidad','Eros','Matrimonio','Crianza','Sagrado','Guerra','Griegos','Bárbaros','Filósofo','Espectáculo','Verdad','Opinión','Ignorancia','Ser','No-ser','Belleza','Absoluto']
     },
     {
       title: 'Libro VI: El sol y la ceguera',
+      axes: [0.8, -0.9, 0.9],
       text: 'Aislado en una nave de necios y asediado por la sofística de la multitud, el verdadero amante de la sabiduría alza la mirada hacia el Bien, un sol invisible cuya luz inefable engendra a la vez el conocimiento en el alma y el ser en el mundo.',
       keywords: ['Nave','Corrupción','Multitud','Sofista','Bestia','Naturaleza','Sol','Luz','Ceguera','Visión','Idea','Bien','Origen','Línea','Imágenes','Creencias','Matemáticas','Inteligencia','Ascenso','Dialéctica']
     },
     {
       title: 'Libro VII: El descenso a las sombras',
+      axes: [0.6, -0.3, 0.7],
       text: 'Desde las profundidades de una caverna subterránea donde los hombres adoran fantasmas de piedra, el iniciado es arrastrado con dolor hacia la luz del origen, solo para ser obligado a retornar, como un dios exiliado, a gobernar entre las tinieblas.',
       keywords: ['Caverna','Cadenas','Fuego','Sombras','Títeres','Ascenso','Deslumbramiento','Retorno','Compulsión','Aritmética','Geometría','Astronomía','Armonía','Dialéctica','Preludio','Sinopsis','Ley','Liberación','Tragedia','Destino']
     },
     {
       title: 'Libro VIII: La caída del orden',
+      axes: [-0.7, 0.8, -0.9],
       text: 'Como todo lo que nace bajo la luna está condenado a corromperse, la ciudad perfecta y su alma gemela se desmoronan en una trágica cascada de mutaciones, descendiendo desde el rigor marcial hasta el vertiginoso y fatal carnaval de la libertad democrática.',
       keywords: ['Decadencia','Número','Mutación','Timocracia','Honor','Victoria','Oligarquía','Riqueza','Avaricia','Zánganos','Mendigos','Democracia','Libertad','Diversidad','Desorden','Insolencia','Anarquía','Igualitarismo','Conflicto','Ruina']
     },
     {
       title: 'Libro IX: El abismo del tirano',
+      axes: [-0.9, 0.5, -0.7],
       text: 'En el fondo del pozo psíquico habita el tirano, un monstruo devorado por sus propias quimeras inconfesables, cuya miseria absoluta demuestra, mediante un cálculo oscuro e irrevocable, que huir de la justicia es condenarse al peor de los infiernos en vida.',
       keywords: ['Tiranía','Deseos','Ilegítimos','Sueños','Locura','Eros','Paranoia','Esclavitud','Pánico','Infelicidad','Placer','Dolor','Ilusión','Cobre','Quimera','León','Monstruo','Cálculo','Condena','Vacío']
     },
     {
       title: 'Libro X: El destino de las almas',
+      axes: [0.7, -0.7, 0.6],
       text: 'Tras desterrar la magia engañosa de los poetas, el velo del cosmos se rasga a través del relato de Er, revelando el Eje del Mundo donde las almas, bajo la mirada impasible de la Necesidad, asumen la terrible carga de elegir su propio destino invisible.',
       keywords: ['Mímesis','Espejo','Cama','Forma','Pintor','Poeta','Tragedia','Luto','Inmortalidad','Recompensa','Mito','Er','Peregrinaje','Jueces','Cielo','Tierra','Huso','Necesidad','Lotería','Olvido']
     }
@@ -270,6 +377,13 @@
   const wordSizes = new Map(); // tamaño de fuente por palabra (cache)
   let cardRect = null;        // {col,row,wCells,hCells} de la tarjeta abierta
   let dpr = 1;
+  let activeAxes = [];        // índices de los ejes activos (máx. 2)
+
+  const AXES = [
+    { neg: 'Apropiación', pos: 'Apertura' },
+    { neg: 'Teórica',     pos: 'Práctica' },
+    { neg: 'Cambio',      pos: 'Permanencia' }
+  ];
 
   function resize() {
     dpr = window.devicePixelRatio || 1;
@@ -296,26 +410,103 @@
     points = [];
     const used = new Set();
     // Evita los bordes para que siempre haya celdas adyacentes
+    // En escritorio evita la franja del menú lateral
+    const minCol = window.innerWidth >= 768 ? Math.ceil(180 / cellW) : 2;
     let guard = 0;
     while (points.length < NUM_POINTS && guard < 1000) {
       guard++;
-      const col = 2 + Math.floor(Math.random() * (cols - 4));
+      const col = minCol + Math.floor(Math.random() * (cols - minCol - 2));
       const row = 2 + Math.floor(Math.random() * (rows - 4));
       const key = col + ',' + row;
       if (used.has(key)) continue;
       // Separación mínima entre puntos
       const tooClose = points.some(p =>
-        Math.abs(p.col - col) < 2 && Math.abs(p.row - row) < 2
+        Math.abs(p.randCol - col) < 2 && Math.abs(p.randRow - row) < 2
       );
       if (tooClose) continue;
       used.add(key);
       // Alterna orientación: mitad horizontales, mitad verticales
-      points.push({ col, row, horizontal: points.length % 2 === 0 });
+      points.push({
+        col, row,            // intersección destino
+        randCol: col,        // posición dispersa original
+        randRow: row,
+        x: col * cellW,      // posición animada en píxeles
+        y: row * cellH,
+        horizontal: points.length % 2 === 0
+      });
+    }
+    layoutPoints(true);
+  }
+
+  // Reubica los puntos según los ejes activos: uno activo los ordena
+  // sobre el eje horizontal; dos los sitúan en un plano cartesiano.
+  function layoutPoints(instant) {
+    // Zona de trazado: deja libre el menú lateral y los bordes
+    const wide = window.innerWidth >= 768;
+    const leftC = wide ? Math.ceil(180 / cellW) : 1;
+    const rightC = cols - Math.max(1, Math.round(cols * 0.06));
+    const topR = Math.max(2, Math.round(rows * 0.12));
+    const botR = rows - Math.max(2, Math.round(rows * 0.12));
+    const usableC = Math.max(1, rightC - leftC);
+    const usableR = Math.max(1, botR - topR);
+    const taken = new Set();
+
+    // Reserva una intersección libre cerca de la calculada, sin salirse
+    // de la zona de trazado
+    const clampC = v => Math.max(leftC, Math.min(rightC, v));
+    const clampR = v => Math.max(1, Math.min(rows - 1, v));
+    function claim(c, r) {
+      c = clampC(c);
+      r = clampR(r);
+      for (let d = 0; d < 14; d++) {
+        // Desplaza primero en vertical para no falsear el valor del eje X
+        for (const [dc, dr] of [[0,0],[0,-d],[0,d],[-d,0],[d,0],[d,-d],[-d,d],[d,d],[-d,-d]]) {
+          const nc = clampC(c + dc);
+          const nr = clampR(r + dr);
+          const key = nc + ',' + nr;
+          if (!taken.has(key)) { taken.add(key); return [nc, nr]; }
+        }
+      }
+      return [c, r];
+    }
+
+    if (activeAxes.length === 0) {
+      points.forEach(p => { p.col = p.randCol; p.row = p.randRow; });
+    } else if (activeAxes.length === 1) {
+      // Un solo eje: ordena de un polo al otro y reparte en vertical
+      const ax = activeAxes[0];
+      const order = points
+        .map((p, i) => i)
+        .sort((a, b) => BOOKS[a].axes[ax] - BOOKS[b].axes[ax]);
+      order.forEach((idx, rank) => {
+        const v = BOOKS[idx].axes[ax];
+        const c = Math.round(leftC + ((v + 1) / 2) * usableC);
+        const r = Math.round(topR + (rank / (NUM_POINTS - 1)) * usableR);
+        const [nc, nr] = claim(c, r);
+        points[idx].col = nc;
+        points[idx].row = nr;
+      });
+    } else {
+      // Dos ejes: plano cartesiano (X = primero, Y = segundo)
+      points.forEach((p, i) => {
+        const vx = BOOKS[i].axes[activeAxes[0]];
+        const vy = BOOKS[i].axes[activeAxes[1]];
+        const c = Math.round(leftC + ((vx + 1) / 2) * usableC);
+        // +1 arriba, -1 abajo (eje Y cartesiano)
+        const r = Math.round(topR + ((1 - vy) / 2) * usableR);
+        const [nc, nr] = claim(c, r);
+        p.col = nc;
+        p.row = nr;
+      });
+    }
+
+    if (instant) {
+      points.forEach(p => { p.x = p.col * cellW; p.y = p.row * cellH; });
     }
   }
 
   function pointXY(p) {
-    return { x: p.col * cellW, y: p.row * cellH };
+    return { x: p.x, y: p.y };
   }
 
   function draw() {
@@ -408,6 +599,43 @@
       }
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
+    }
+
+    // Ejes activos: cruz central y etiquetas de los polos
+    if (activeAxes.length && w >= 768) {
+      ctx.save();
+      ctx.setLineDash([2, 6]);
+      ctx.strokeStyle = '#c8c8c8';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(w / 2) + 0.5, 0);
+      ctx.lineTo(Math.round(w / 2) + 0.5, h);
+      if (activeAxes.length >= 2) {
+        ctx.moveTo(0, Math.round(h / 2) + 0.5);
+        ctx.lineTo(w, Math.round(h / 2) + 0.5);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.font = '10px "Helvetica Neue", Helvetica, Arial, sans-serif';
+      ctx.fillStyle = '#999';
+      const ax = AXES[activeAxes[0]];
+      ctx.textAlign = 'left';
+      ctx.fillText(ax.neg.toUpperCase(), 24, h - 24);
+      ctx.textAlign = 'right';
+      ctx.fillText(ax.pos.toUpperCase(), w - 24, h - 24);
+      if (activeAxes.length >= 2) {
+        const ay = AXES[activeAxes[1]];
+        ctx.fillText(ay.pos.toUpperCase(), w - 24, 64);
+        ctx.fillText(ay.neg.toUpperCase(), w - 24, h - 52);
+      }
+      ctx.textAlign = 'left';
+    }
+
+    // Desplazamiento suave de los puntos hacia su posición cartesiana
+    for (const p of points) {
+      p.x += (p.col * cellW - p.x) * 0.12;
+      p.y += (p.row * cellH - p.y) * 0.12;
     }
 
     // Punto bajo el cursor (si lo hay): crece él, encogen los demás
@@ -586,6 +814,36 @@
   closeBtn.addEventListener('click', closeCard);
   window.addEventListener('resize', resize);
 
+  // --- Menú de ejes ---
+
+  const menuItems = [...document.querySelectorAll('#menu .menu-item')];
+
+  menuItems.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const axis = Number(btn.dataset.axis);
+      const at = activeAxes.indexOf(axis);
+      if (at !== -1) activeAxes.splice(at, 1);
+      else {
+        activeAxes.push(axis);
+        // Solo dos ejes a la vez: el más antiguo cede su lugar
+        if (activeAxes.length > 2) activeAxes.shift();
+      }
+      syncMenu();
+      closeCard();
+      layoutPoints(false);
+    });
+  });
+
+  function syncMenu() {
+    menuItems.forEach(btn => {
+      const axis = Number(btn.dataset.axis);
+      const at = activeAxes.indexOf(axis);
+      btn.classList.toggle('active', at !== -1);
+      btn.dataset.role = at === 0 ? 'X' : at === 1 ? 'Y' : '';
+    });
+  }
+
+  syncMenu();
   resize();
   requestAnimationFrame(draw);
 })();
